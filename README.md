@@ -1,101 +1,69 @@
-# VECV SCADA Pull Chord Report Viewer
+ins# VECV SCADA Pull Chord Report Viewer
 
 ## Overview
-This project is a comprehensive SCADA reporting solution designed for VECV. It visualizes Pull Chord data from the shop floor, providing real-time insights into production efficiency, maintenance calls, and quality alerts. The application fetches data from a SQL Server database, processes it via a Spring Boot backend, and displays it on a dynamic Thymeleaf-based frontend.
+This project is a comprehensive SCADA reporting solution designed for VECV. It visualizes Pull Chord data from the shop floor, providing real-time insights into production efficiency, maintenance calls, and quality alerts. The application fetches data from a SQL Server database, processes it via a Spring Boot backend, and displays it on a dynamic, premium dashboard.
 
-## 🚀 Features
-- **Real-time Reporting**: View live data from Z3, Z5, Z7, and Z9 Pullchord tables.
-- **Dynamic Filtering**: Filter by Station, Shift (A, B, C), and Date/Time ranges.
-- **Interactive Dashboard**: A modern dashboard with Key Performance Indicators (KPIs).
-- **Excel Export**: Download detailed reports for offline analysis.
-- **Responsive Design**: optimized for shop floor displays and desktop monitoring.
+![Status](https://img.shields.io/badge/Status-Deployment%20Ready-success)
+![Java](https://img.shields.io/badge/Java-17-orange)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3-green)
 
-## 📊 System Architecture & Flow Chart
+## 🚀 Key Features
+- **High-Performance Dashboard**: 10+ Interactive Charts (Trends, MTBF, MTTR).
+- **Hybrid Data Engine**: Toggle between "Fast Mode" (Indexed, <1s) and "Legacy Mode" (Raw, ~26s).
+- **Real-Time Polling**: Updates every 30 seconds automatically.
+- **Multi-Line Support**: Supports Z3, Z5, Z7, and Z9 production lines.
 
-The following diagram illustrates the complete data flow from the physical database tables to the user interface.
+## 📂 Project Structure
+This project follows a professional deployment structure:
 
-```mermaid
-graph TD
-    subgraph Database["SQL Server (VECV_Scada_DB)"]
-        Table[("Physical Tables<br/>(Z3, Z5, Z7, Z9_Pullchord_T)")]
-        View[("Database Views<br/>(vw_Pullchord_All)")]
-        Table --> View
-    end
+-   `/src`: Source code (Java Controller, Repository, HTML/JS Frontend).
+-   `/docs`: Detailed documentation, manual, and architecture guides.
+    -   `PROJECT_MANUAL.md`: **Start Here** - Client & User Guide.
+    -   `project-flow.md`: Technical Flowchart.
+-   `/sql`: Database setup and optimization scripts.
+    -   `database_setup.sql`: Initial DB creation.
+    -   `optimize_db.sql`: Performance tuning scripts.
+-   `/target`: Compilation output.
+    -   `PullChord-Report-0.0.1-SNAPSHOT.jar`: The executable JAR file (located in `Scadda-Report/target/PullChord-Report-0.0.1-SNAPSHOT.jar`).
 
-    subgraph Backend["Spring Boot Application (Port 8070)"]
-        Repo["JPA Repositories"]
-        Entity["Entity Classes<br/>(@Entity)"]
-        Controller["REST Controllers<br/>(Z3PullchordT2Controller)"]
-        
-        View -. JDBC Connection .-> Repo
-        Repo --> Entity
-        Entity --> Controller
-    end
+## 📖 Quick Start (One-Click)
 
-    subgraph Frontend["Frontend Layer"]
-        Thymeleaf["Thymeleaf Engine"]
-        Process["HTML Rendering"]
-        UI["User Interface<br/>(Browser)"]
-        
-        Controller --> Thymeleaf
-        Thymeleaf --> Process
-        Process --> UI
-    end
+The easiest way to install this on a new machine is to use the automated installer.
 
-    User((User)) -->|HTTP Request| UI
-    UI -->|GET /report| Controller
-```
+1.  **Copy the Folder**: Copy the entire `Scadda-Report` folder to the target machine.
+2.  **Run Installer**: Double-click `ONE_CLICK_SETUP.bat`.
+3.  **Select Option**:
+    *   **Option 1 (New Install)**: Choose this to create a fresh Database. You will be asked to set a **Password**.
+        *   **Backup Restore**: If you have a `vecv.bak` file (or a folder named `vecv.bak` containing the file) in the project directory, it will be automatically restored.
+    *   **Option 2 (Existing DB)**: Choose this to connect to an existing SQL Server. You will be asked for the **Hostname**, **Username**, and **Password**.
+4.  **Launch**: Click the "VECV Dashboard" shortcut on your Desktop.
 
-## 🛠️ How It Works
+---
 
-### 1. Data Layer
-The system connects to a **SQL Server** database (`VECV_Scada_DB`). Raw data from the PLC/SCADA systems is stored in normalized tables (e.g., `Z3_Pullchord_T2`). We use JPA Repositories to interact with these tables efficiently.
+### Manual Setup (Advanced)
+If you prefer manual control:
 
-### 2. Backend Processing
-The backend is built with **Spring Boot**.
-- **Controllers**: Handle incoming HTTP requests and manage application routing.
-- **Services/Repositories**: Execute SQL queries to fetch specific datasets based on user filters (Shift, Station, Time).
-- **Model**: Data is mapped to Java Objects (Entities) for easy manipulation.
+1.  **Database Setup**: Ensure SQL Server is running. Run scripts in `/sql`.
+2.  **Run Application**:
+    **Windows:**
+    ```cmd
+    mvnw.cmd spring-boot:run
+    ```
+    **Mac/Linux:**
+    ```bash
+    ./mvnw spring-boot:run
+    ```
 
-### 3. Frontend Visualization
-Server-side rendering is handled by **Thymeleaf**.
-- The `report.html` template dynamically renders tables based on the fetched data.
-- The Dashboard (`KD_VECV_NewClientDemoUI.html`) embeds these reports and provides high-level metrics.
-- Users can interact with the UI to drill down into specific production lines or download data.
+3.  Access the dashboard at: `http://localhost:8070`
 
-## 💻 Technologies Used
-- **Language**: Java 17
-- **Framework**: Spring Boot 3.3.11
-- **Database**: SQL Server
-- **Template Engine**: Thymeleaf
-- **Build Tool**: Maven
-- **Frontend**: HTML5, CSS3, JavaScript
+---
+### Optional: Create Executable (.exe)
+If you prefer a professional `VECV_Dashboard_Setup.exe` file instead of the batch file:
 
-## 📥 Installation & Setup
+1.  Double-click `BUILD_SETUP.bat` inside the folder.
+2.  It will create `VECV_Dashboard_Setup.exe`.
+3.  You can now delete `Setup.cs` and `BUILD_SETUP.bat` and share the folder with the `.exe`.
 
-### 1. Database Setup
-The application connects to a SQL Server database. We have provided a script to set this up automatically.
-1. Create a database named `VECV_Scada_DB` in your SQL Server.
-2. Run the provided script **`database_setup.sql`** (located in the root folder) to create the required tables (`Z3_Pullchord_T2`, etc.) and dummy data.
-
-### 2. Configure Connection
-Open `src/main/resources/application.properties` and update your SQL Server credentials:
-```properties
-spring.datasource.url=jdbc:sqlserver://localhost:1433;databaseName=VECV_Scada_DB;encrypt=true;trustServerCertificate=true;
-spring.datasource.username=sa
-spring.datasource.password=YOUR_PASSWORD  <-- Update this
-```
-
-### 3. Run the Application
-You can start the server using the included Maven wrapper:
-```bash
-./mvnw spring-boot:run
-```
-Once started, access the application at:
-- **Dashboard**: [http://localhost:8070/dashboard](http://localhost:8070/dashboard)
-- **Report Viewer**: [http://localhost:8070/report](http://localhost:8070/report)
-
-*For a detailed step-by-step guide, please refer to [SETUP.md](SETUP.md).*
-
-## 👥 Credits
-Developed by **Koustubh Deodhar**.
+---
+## 📚 Documentation
+For a detailed explanation of how the data flows from the PLC/SQL to the charts, please refer to the **[Client Manual](docs/PROJECT_MANUAL.md)**.

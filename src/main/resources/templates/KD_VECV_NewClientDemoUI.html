@@ -41,6 +41,28 @@
         }
 
 
+        /* Progress Bar */
+        #data-progress-bar-container {
+            position: fixed;
+            top: 60px;
+            /* Below header */
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background-color: transparent;
+            z-index: 999;
+            pointer-events: none;
+            display: none;
+        }
+
+        #data-progress-bar {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #ffcc00, #ff4d4f);
+            transition: width 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+            box-shadow: 0 0 10px rgba(255, 77, 79, 0.5);
+        }
+
         /* --- GLOBAL LAYOUT RESET --- */
         body {
             margin: 0;
@@ -669,6 +691,72 @@
         .logo-area {
             display: none !important;
         }
+
+        /* Database Connection Status */
+        .db-status {
+            padding: 15px 20px;
+            text-align: center;
+            border-top: 1px solid var(--border);
+            margin-top: auto;
+        }
+
+        .db-status-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 11px;
+            color: var(--muted);
+            margin-bottom: 8px;
+        }
+
+        .db-status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .db-status-dot.connected {
+            background-color: #10b981;
+            box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+            animation: pulse-green 2s infinite;
+        }
+
+        .db-status-dot.disconnected {
+            background-color: #ef4444;
+            box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+            animation: pulse-red 2s infinite;
+        }
+
+        @keyframes pulse-green {
+
+            0%,
+            100% {
+                box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+            }
+
+            50% {
+                box-shadow: 0 0 16px rgba(16, 185, 129, 0.8);
+            }
+        }
+
+        @keyframes pulse-red {
+
+            0%,
+            100% {
+                box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+            }
+
+            50% {
+                box-shadow: 0 0 16px rgba(239, 68, 68, 0.8);
+            }
+        }
+
+        .version-text {
+            font-size: 11px;
+            color: var(--muted);
+        }
     </style>
 </head>
 
@@ -736,12 +824,30 @@
                 <div class="switch-knob"><i class="fas fa-sun"></i></div>
             </div>
 
+            <!-- Performance Mode Toggle -->
+            <div class="toggle-container"
+                style="margin-right: 20px; display: flex; align-items: center; background: rgba(255,255,255,0.1); padding: 5px 10px; border-radius: 20px;">
+                <span style="color: white; font-size: 12px; margin-right: 8px;">Mode:</span>
+                <label class="switch" style="position: relative; display: inline-block; width: 40px; height: 20px;">
+                    <input type="checkbox" id="perf-toggle" onchange="togglePerformanceMode()" checked>
+                    <span class="slider round"
+                        style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ff4d4f; transition: .4s; border-radius: 20px;"></span>
+                </label>
+                <span id="perf-label"
+                    style="color: #4ade80; font-size: 12px; margin-left: 8px; font-weight: bold;">Fast</span>
+            </div>
+
             <!-- Date & Time -->
             <div class="datetime-box">
                 <div class="date-text" id="date-display">-- min, 0000</div>
                 <div class="time-text" id="time-display">00:00:00 AM</div>
             </div>
         </div>
+    </div>
+
+    <!-- Data Loading Progress Bar -->
+    <div id="data-progress-bar-container">
+        <div id="data-progress-bar"></div>
     </div>
 
 
@@ -756,8 +862,12 @@
                 </div>
                 <div class="nav-item"><i class="fas fa-cog"></i> Settings</div>
             </div>
-            <div style="padding: 20px; font-size: 11px; color: var(--muted); text-align: center;">
-                v2.5.0 Stable
+            <div class="db-status">
+                <div class="db-status-indicator">
+                    <div class="db-status-dot connected" id="db-status-dot"></div>
+                    <span id="db-status-text">Connected</span>
+                </div>
+                <div class="version-text">v2.5.0 Stable</div>
             </div>
         </div>
         <div class="main-content">
@@ -844,6 +954,12 @@
                         <div class="chart-box">
                             <div class="chart-header">8. Eqpt/Conveyor Downtime</div>
                             <canvas id="chart8"></canvas>
+                        </div>
+
+                        <!-- 9. Line Dist -->
+                        <div class="chart-box">
+                            <div class="chart-header">9. Line Conveyor Downtime</div>
+                            <canvas id="chart9"></canvas>
                         </div>
 
                         <!-- 10. Line Downtime -->
@@ -953,129 +1069,76 @@
                         <table>
                             <thead>
                                 <tr>
-                                    <th><a
-                                            th:href="@{/dashboard(selectedTable=${selectedTable}, station=${station}, shift=${shift}, fromDateTime=${fromDateTime}, toDateTime=${toDateTime}, page=${currentPage}, size=${pageSize}, sortField='srNo', sortDir=${reverseSortDir})}">
+                                    <th><a th:href="@{/dashboard(selectedTable=${selectedTable}, station=${station}, shift=${shift}, fromDateTime=${fromDateTime}, toDateTime=${toDateTime}, page=${currentPage}, size=${pageSize}, sortField='srNo', sortDir=${reverseSortDir})}"
+                                            title="Serial Number">
                                             Sr No <i th:if="${sortField == 'srNo'}"
                                                 th:class="${sortDir == 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down'}"></i>
                                             <i th:unless="${sortField == 'srNo'}" class="fas fa-sort"
                                                 style="opacity:0.3"></i>
                                         </a></th>
 
-                                    <th><a
-                                            th:href="@{/dashboard(selectedTable=${selectedTable}, station=${station}, shift=${shift}, fromDateTime=${fromDateTime}, toDateTime=${toDateTime}, page=${currentPage}, size=${pageSize}, sortField='dateTime', sortDir=${reverseSortDir})}">
-                                            Date Time <i th:if="${sortField == 'dateTime'}"
+                                    <th><a th:href="@{/dashboard(selectedTable=${selectedTable}, station=${station}, shift=${shift}, fromDateTime=${fromDateTime}, toDateTime=${toDateTime}, page=${currentPage}, size=${pageSize}, sortField='dateTime', sortDir=${reverseSortDir})}"
+                                            title="Event Start Time (Date & Time)">
+                                            Start Time <i th:if="${sortField == 'dateTime'}"
                                                 th:class="${sortDir == 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down'}"></i>
                                             <i th:unless="${sortField == 'dateTime'}" class="fas fa-sort"
                                                 style="opacity:0.3"></i>
                                         </a></th>
 
-                                    <th><a
-                                            th:href="@{/dashboard(selectedTable=${selectedTable}, station=${station}, shift=${shift}, fromDateTime=${fromDateTime}, toDateTime=${toDateTime}, page=${currentPage}, size=${pageSize}, sortField='shift', sortDir=${reverseSortDir})}">
+                                    <th><a th:href="@{/dashboard(selectedTable=${selectedTable}, station=${station}, shift=${shift}, fromDateTime=${fromDateTime}, toDateTime=${toDateTime}, page=${currentPage}, size=${pageSize}, sortField='shift', sortDir=${reverseSortDir})}"
+                                            title="Work Shift">
                                             Shift <i th:if="${sortField == 'shift'}"
                                                 th:class="${sortDir == 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down'}"></i>
                                             <i th:unless="${sortField == 'shift'}" class="fas fa-sort"
                                                 style="opacity:0.3"></i>
                                         </a></th>
 
-                                    <th><a
-                                            th:href="@{/dashboard(selectedTable=${selectedTable}, station=${station}, shift=${shift}, fromDateTime=${fromDateTime}, toDateTime=${toDateTime}, page=${currentPage}, size=${pageSize}, sortField='line', sortDir=${reverseSortDir})}">
-                                            Line <i th:if="${sortField == 'line'}"
-                                                th:class="${sortDir == 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down'}"></i>
-                                            <i th:unless="${sortField == 'line'}" class="fas fa-sort"
-                                                style="opacity:0.3"></i>
-                                        </a></th>
-
-                                    <th><a
-                                            th:href="@{/dashboard(selectedTable=${selectedTable}, station=${station}, shift=${shift}, fromDateTime=${fromDateTime}, toDateTime=${toDateTime}, page=${currentPage}, size=${pageSize}, sortField='zone', sortDir=${reverseSortDir})}">
+                                    <th><a th:href="@{/dashboard(selectedTable=${selectedTable}, station=${station}, shift=${shift}, fromDateTime=${fromDateTime}, toDateTime=${toDateTime}, page=${currentPage}, size=${pageSize}, sortField='zone', sortDir=${reverseSortDir})}"
+                                            title="Production Zone">
                                             Zone <i th:if="${sortField == 'zone'}"
                                                 th:class="${sortDir == 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down'}"></i>
                                             <i th:unless="${sortField == 'zone'}" class="fas fa-sort"
                                                 style="opacity:0.3"></i>
                                         </a></th>
 
-                                    <th><a
-                                            th:href="@{/dashboard(selectedTable=${selectedTable}, station=${station}, shift=${shift}, fromDateTime=${fromDateTime}, toDateTime=${toDateTime}, page=${currentPage}, size=${pageSize}, sortField='station', sortDir=${reverseSortDir})}">
+                                    <th><a th:href="@{/dashboard(selectedTable=${selectedTable}, station=${station}, shift=${shift}, fromDateTime=${fromDateTime}, toDateTime=${toDateTime}, page=${currentPage}, size=${pageSize}, sortField='station', sortDir=${reverseSortDir})}"
+                                            title="Station Identifier">
                                             Station <i th:if="${sortField == 'station'}"
                                                 th:class="${sortDir == 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down'}"></i>
                                             <i th:unless="${sortField == 'station'}" class="fas fa-sort"
                                                 style="opacity:0.3"></i>
                                         </a></th>
 
-                                    <th><a
-                                            th:href="@{/dashboard(selectedTable=${selectedTable}, station=${station}, shift=${shift}, fromDateTime=${fromDateTime}, toDateTime=${toDateTime}, page=${currentPage}, size=${pageSize}, sortField='side', sortDir=${reverseSortDir})}">
-                                            Side <i th:if="${sortField == 'side'}"
-                                                th:class="${sortDir == 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down'}"></i>
-                                            <i th:unless="${sortField == 'side'}" class="fas fa-sort"
-                                                style="opacity:0.3"></i>
-                                        </a></th>
+                                    <!-- Category / Type -->
+                                    <th title="Event Category (e.g., Maintenance, Quality)">Type</th>
 
-                                    <th><a
-                                            th:href="@{/dashboard(selectedTable=${selectedTable}, station=${station}, shift=${shift}, fromDateTime=${fromDateTime}, toDateTime=${toDateTime}, page=${currentPage}, size=${pageSize}, sortField='maintenanceCall', sortDir=${reverseSortDir})}">
-                                            Maint <i th:if="${sortField == 'maintenanceCall'}"
-                                                th:class="${sortDir == 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down'}"></i>
-                                            <i th:unless="${sortField == 'maintenanceCall'}" class="fas fa-sort"
-                                                style="opacity:0.3"></i>
-                                        </a></th>
+                                    <!-- Second Start Time as requested -->
+                                    <th title="Event Start Time">Start Time</th>
 
-                                    <th><a
-                                            th:href="@{/dashboard(selectedTable=${selectedTable}, station=${station}, shift=${shift}, fromDateTime=${fromDateTime}, toDateTime=${toDateTime}, page=${currentPage}, size=${pageSize}, sortField='materialCall', sortDir=${reverseSortDir})}">
-                                            Material <i th:if="${sortField == 'materialCall'}"
-                                                th:class="${sortDir == 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down'}"></i>
-                                            <i th:unless="${sortField == 'materialCall'}" class="fas fa-sort"
-                                                style="opacity:0.3"></i>
-                                        </a></th>
+                                    <th title="Event End Time">End Time</th>
 
-                                    <th><a
-                                            th:href="@{/dashboard(selectedTable=${selectedTable}, station=${station}, shift=${shift}, fromDateTime=${fromDateTime}, toDateTime=${toDateTime}, page=${currentPage}, size=${pageSize}, sortField='productionCall', sortDir=${reverseSortDir})}">
-                                            Prod <i th:if="${sortField == 'productionCall'}"
-                                                th:class="${sortDir == 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down'}"></i>
-                                            <i th:unless="${sortField == 'productionCall'}" class="fas fa-sort"
-                                                style="opacity:0.3"></i>
-                                        </a></th>
+                                    <!-- Individual Downtime -->
+                                    <th title="Individual Event Duration">Downtime</th>
 
-                                    <th><a
-                                            th:href="@{/dashboard(selectedTable=${selectedTable}, station=${station}, shift=${shift}, fromDateTime=${fromDateTime}, toDateTime=${toDateTime}, page=${currentPage}, size=${pageSize}, sortField='pullCord', sortDir=${reverseSortDir})}">
-                                            Pull Cord <i th:if="${sortField == 'pullCord'}"
-                                                th:class="${sortDir == 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down'}"></i>
-                                            <i th:unless="${sortField == 'pullCord'}" class="fas fa-sort"
-                                                style="opacity:0.3"></i>
-                                        </a></th>
-
-                                    <th><a
-                                            th:href="@{/dashboard(selectedTable=${selectedTable}, station=${station}, shift=${shift}, fromDateTime=${fromDateTime}, toDateTime=${toDateTime}, page=${currentPage}, size=${pageSize}, sortField='qualityCall', sortDir=${reverseSortDir})}">
-                                            Qual <i th:if="${sortField == 'qualityCall'}"
-                                                th:class="${sortDir == 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down'}"></i>
-                                            <i th:unless="${sortField == 'qualityCall'}" class="fas fa-sort"
-                                                style="opacity:0.3"></i>
-                                        </a></th>
-
-                                    <th><a
-                                            th:href="@{/dashboard(selectedTable=${selectedTable}, station=${station}, shift=${shift}, fromDateTime=${fromDateTime}, toDateTime=${toDateTime}, page=${currentPage}, size=${pageSize}, sortField='remark', sortDir=${reverseSortDir})}">
-                                            Remark <i th:if="${sortField == 'remark'}"
-                                                th:class="${sortDir == 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down'}"></i>
-                                            <i th:unless="${sortField == 'remark'}" class="fas fa-sort"
-                                                style="opacity:0.3"></i>
-                                        </a></th>
+                                    <!-- Cluster Downtime -->
+                                    <th title="Total Downtime for Consecutive Events (Cluster)">Cluster Downtime</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr th:each="record : ${records}">
                                     <td th:text="${record.srNo}"></td>
-                                    <td th:text="${record.dateTime}"></td>
+                                    <td th:text="${record.startTime}"></td>
                                     <td th:text="${record.shift}"></td>
-                                    <td th:text="${record.line}"></td>
                                     <td th:text="${record.zone}"></td>
                                     <td th:text="${record.station}"></td>
-                                    <td th:text="${record.side}"></td>
-                                    <td th:text="${record.maintenanceCall}"></td>
-                                    <td th:text="${record.materialCall}"></td>
-                                    <td th:text="${record.productionCall}"></td>
-                                    <td th:text="${record.pullCord}"></td>
-                                    <td th:text="${record.qualityCall}"></td>
-                                    <td th:text="${record.remark}"></td>
+                                    <td th:text="${record.category}"></td>
+                                    <td th:text="${record.startTime}"></td>
+                                    <td th:text="${record.endTime}"></td>
+                                    <td th:text="${record.individualDowntime}"></td>
+                                    <td th:text="${record.clusterDowntime}"></td>
                                 </tr>
                                 <tr th:if="${records == null or records.empty}">
-                                    <td colspan="13" style="text-align:center; padding:30px; opacity:0.6;">No data found
+                                    <td colspan="10" style="text-align:center; padding:30px; opacity:0.6;">No data found
                                         for
                                         selection</td>
                                 </tr>
@@ -1166,123 +1229,307 @@
             }
         };
 
-        // 4. SCV Downtime (Real: Shift Distribution)
-        new Chart(document.getElementById('chart4'), {
-            type: 'pie',
-            data: {
-                labels: shiftLabels || ['No Data'],
-                datasets: [{
-                    data: shiftValues || [1],
-                    backgroundColor: ['#3b82f6', '#f97316', '#9ca3af', '#facc15', '#10b981']
-                }]
-            }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#9aa3b2' } } } }
-        });
+        // Charts are initialized in initializeCharts() function below.
 
-        // 5. Line Breakdowns (Real: Line Distribution)
-        new Chart(document.getElementById('chart5'), {
-            type: 'bar',
-            data: {
-                labels: lineLabels || ['No Data'],
-                datasets: [{
-                    label: 'No. of B/Ds',
-                    data: lineValues || [0],
-                    backgroundColor: '#ffec3d',
-                    borderColor: '#ffec3d',
-                    borderWidth: 1
-                }]
-            }, options: commonOptions
-        });
+    </script>
 
-        // 8. Equipment (Real: Top Stations)
-        new Chart(document.getElementById('chart8'), {
-            type: 'doughnut',
-            data: {
-                labels: stationLabels || ['No Data'],
-                datasets: [{
-                    data: stationValues || [1],
-                    backgroundColor: ['#1890ff', '#722ed1', '#52c41a', '#fadb14', '#fa541c']
-                }]
-            }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#9aa3b2' } } } }
-        });
+    <script>
+        // Store chart instances globally for updates
+        let chartInstances = {};
 
-        // --- Other Charts (Kept as Mock for now as complex metrics require more data/logic) ---
-        // 1. OEE Metric (Was Breakdown Trend)
-        new Chart(document.getElementById('chart1'), {
-            type: 'bar', // Visualizing OEE components
-            data: {
-                labels: ['Availability', 'Performance', 'Quality', 'OEE'],
-                datasets: [
-                    {
-                        label: 'Current Metrics (%)',
-                        data: [kpiAvailability, 96, 99, kpiOEE],
-                        backgroundColor: ['#fa8c16', '#3b82f6', '#52c41a', '#722ed1']
+        // Initialize all charts with current data
+        function initializeCharts() {
+            const commonOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { labels: { color: '#9aa3b2', font: { size: 10 } } } },
+                scales: {
+                    y: { grid: { color: '#ffffff14' }, ticks: { color: '#9aa3b2' }, beginAtZero: true },
+                    x: { grid: { color: '#ffffff14' }, ticks: { color: '#9aa3b2' } }
+                }
+            };
+
+            // Helper to create gradient
+            const createGradient = (ctx, r, g, b) => {
+                const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+                gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.5)`);
+                gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0.0)`);
+                return gradient;
+            };
+
+            // 1. Breakdown Trend 
+            const ctx1 = document.getElementById('chart1').getContext('2d');
+            chartInstances.chart1 = new Chart(ctx1, {
+                type: 'line',
+                data: { labels: [], datasets: [{ label: 'Breakdown %', data: [], borderColor: '#f5222d', backgroundColor: createGradient(ctx1, 245, 34, 45), fill: true, tension: 0.4 }] },
+                options: { ...commonOptions, plugins: { ...commonOptions.plugins, title: { display: true, text: 'Chassis Line Breakdown (%)', color: '#fff' } } }
+            });
+
+            // 2. MTBF Trend
+            const ctx2 = document.getElementById('chart2').getContext('2d');
+            chartInstances.chart2 = new Chart(ctx2, {
+                type: 'line',
+                data: { labels: [], datasets: [{ label: 'MTBF (Hrs)', data: [], borderColor: '#722ed1', backgroundColor: createGradient(ctx2, 114, 46, 209), fill: true, tension: 0.4 }] },
+                options: { ...commonOptions, plugins: { ...commonOptions.plugins, title: { display: true, text: 'MTBF Trend', color: '#fff' } } }
+            });
+
+            // 3. MTTR Trend
+            const ctx3 = document.getElementById('chart3').getContext('2d');
+            chartInstances.chart3 = new Chart(ctx3, {
+                type: 'line',
+                data: { labels: [], datasets: [{ label: 'MTTR (Hrs)', data: [], borderColor: '#13c2c2', backgroundColor: createGradient(ctx3, 19, 194, 194), fill: true, tension: 0.4 }] },
+                options: { ...commonOptions, plugins: { ...commonOptions.plugins, title: { display: true, text: 'MTTR Trend', color: '#fff' } } }
+            });
+
+            // 4. SCV Downtime (Pie)
+            chartInstances.chart4 = new Chart(document.getElementById('chart4'), {
+                type: 'pie',
+                data: { labels: ['Maintenance', 'Production', 'Material', 'Quality'], datasets: [{ data: [0, 0, 0, 0], backgroundColor: ['#ff4d4f', '#1890ff', '#faad14', '#52c41a'] }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#9aa3b2' } }, title: { display: true, text: 'SCV Downtime', color: '#fff' } } }
+            });
+
+            // 5. Line Breakdown Trend
+            const ctx5 = document.getElementById('chart5').getContext('2d');
+            chartInstances.chart5 = new Chart(ctx5, {
+                type: 'line',
+                data: { labels: [], datasets: [{ label: 'No. of Line B/Ds', data: [], borderColor: '#fa8c16', backgroundColor: createGradient(ctx5, 250, 140, 22), fill: true, tension: 0.4 }] },
+                options: { ...commonOptions, plugins: { ...commonOptions.plugins, title: { display: true, text: 'No. of Line B/Ds', color: '#fff' } } }
+            });
+
+            // 6. Loss Hours Trend
+            const ctx6 = document.getElementById('chart6').getContext('2d');
+            chartInstances.chart6 = new Chart(ctx6, {
+                type: 'line',
+                data: { labels: [], datasets: [{ label: 'Loss Hours', data: [], borderColor: '#f5222d', backgroundColor: createGradient(ctx6, 245, 34, 45), fill: true, tension: 0.4 }] },
+                options: { ...commonOptions, plugins: { ...commonOptions.plugins, title: { display: true, text: 'Loss Hours Trend', color: '#fff' } } }
+            });
+
+            // 7. % Uptime of Line
+            const ctx7 = document.getElementById('chart7').getContext('2d');
+            chartInstances.chart7 = new Chart(ctx7, {
+                type: 'line',
+                data: { labels: [], datasets: [{ label: '% Uptime', data: [], borderColor: '#52c41a', backgroundColor: createGradient(ctx7, 82, 196, 26), fill: true, tension: 0.4 }] },
+                options: { ...commonOptions, plugins: { ...commonOptions.plugins, title: { display: true, text: '% Uptime of Line', color: '#fff' } } }
+            });
+
+            // 8. Top Stations
+            chartInstances.chart8 = new Chart(document.getElementById('chart8'), {
+                type: 'doughnut',
+                data: { labels: stationLabels || [], datasets: [{ data: stationValues || [], backgroundColor: ['#1890ff', '#722ed1', '#52c41a', '#fadb14', '#fa541c'] }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#9aa3b2' } }, title: { display: true, text: 'Top Stations', color: '#fff' } } }
+            });
+
+            // 9. Line Conveyor Downtime (Pie)
+            chartInstances.chart9 = new Chart(document.getElementById('chart9'), {
+                type: 'pie',
+                data: { labels: [], datasets: [{ data: [], backgroundColor: ['#ffec3d', '#ff7a45', '#bae637', '#36cfc9', '#40a9ff'] }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#9aa3b2' } }, title: { display: true, text: 'Line Downtime Dist', color: '#fff' } } }
+            });
+
+            // 10. Line Stoppage (Duplicate 6 for now)
+            const ctx10 = document.getElementById('chart10').getContext('2d');
+            chartInstances.chart10 = new Chart(ctx10, {
+                type: 'line',
+                data: { labels: ['No Data'], datasets: [{ label: 'Stoppage Time', data: [0], borderColor: '#fa541c', backgroundColor: createGradient(ctx10, 250, 84, 28), fill: true }] },
+                options: commonOptions
+            });
+        }
+
+        // Real-time data update function
+        async function updateChartsWithLiveData() {
+            // Progress Bar Logic
+            const pContainer = document.getElementById('data-progress-bar-container');
+            const pBar = document.getElementById('data-progress-bar');
+            let progress = 0;
+            let progressInterval;
+
+            if (pContainer && pBar) {
+                pContainer.style.display = 'block';
+                pBar.style.width = '0%';
+
+                // Simulate progress (0-90% over ~20s)
+                progressInterval = setInterval(() => {
+                    progress += Math.random() * 3;
+                    if (progress > 90) progress = 90;
+                    pBar.style.width = progress + '%';
+                }, 1000);
+            }
+
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const selectedTable = urlParams.get('selectedTable') || 'Z3 Pullchord T2';
+
+                // Read Performance Mode
+                const perfToggle = document.getElementById('perf-toggle');
+                const mode = (perfToggle && perfToggle.checked) ? 'optimized' : 'legacy';
+
+                const response = await fetch(`/api/analytics?selectedTable=${encodeURIComponent(selectedTable)}&mode=${mode}`);
+
+                // Done Fetching
+                if (pContainer && pBar) {
+                    clearInterval(progressInterval);
+                    pBar.style.width = '100%';
+                    setTimeout(() => {
+                        pContainer.style.display = 'none';
+                        pBar.style.width = '0%';
+                    }, 500);
+                }
+
+                if (!response.ok) return;
+                const data = await response.json();
+
+                // Check and update trends
+                if (data.trends && data.trends.labels && data.trends.labels.length > 0) {
+                    const labels = data.trends.labels;
+
+                    // Helper to update line chart
+                    const updateLineChart = (chart, values) => {
+                        if (chart) {
+                            chart.data.labels = labels;
+                            chart.data.datasets[0].data = values;
+                            chart.update('none');
+                        }
+                    };
+
+                    updateLineChart(chartInstances.chart1, data.trends.breakdown);
+                    updateLineChart(chartInstances.chart2, data.trends.mtbf);
+                    updateLineChart(chartInstances.chart3, data.trends.mttr);
+                    updateLineChart(chartInstances.chart5, data.trends.lineBreakdown);
+                    updateLineChart(chartInstances.chart6, data.trends.values);
+                    updateLineChart(chartInstances.chart7, data.trends.uptime);
+
+                    // Chart 10 (Stoppage) mapped to Loss Hours for now
+                    updateLineChart(chartInstances.chart10, data.trends.values);
+
+                    // Chart 4: Pie Chart
+                    if (chartInstances.chart4) {
+                        chartInstances.chart4.data.datasets[0].data = [
+                            data.trends.pieMaint || 0,
+                            data.trends.pieProd || 0,
+                            data.trends.pieMat || 0,
+                            data.trends.pieQual || 0
+                        ];
+                        chartInstances.chart4.update('none');
                     }
-                ]
-            }, options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: { y: { max: 100, grid: { color: '#ffffff14' }, ticks: { color: '#9aa3b2' } }, x: { grid: { display: false }, ticks: { color: '#9aa3b2' } } },
-                plugins: { legend: { display: false }, title: { display: true, text: 'Real-Time OEE & Components', color: '#fff' } }
+                }
+
+                // Chart 8: Top Stations
+                if (data.stations && chartInstances.chart8) {
+                    chartInstances.chart8.data.labels = data.stations.labels;
+                    chartInstances.chart8.data.datasets[0].data = data.stations.values;
+                    chartInstances.chart8.update('none');
+                }
+
+                // Chart 9: Line Distribution
+                if (data.lines && chartInstances.chart9) {
+                    chartInstances.chart9.data.labels = data.lines.labels;
+                    chartInstances.chart9.data.datasets[0].data = data.lines.values;
+                    chartInstances.chart9.update('none');
+                }
+
+                // KPIs
+                if (data.kpis) { updateKPICards(data.kpis); }
+
+                console.log('Charts updated with live trend data at', new Date().toLocaleTimeString());
+
+            } catch (error) {
+                console.error('Error updating charts:', error);
+                if (pContainer) {
+                    clearInterval(progressInterval);
+                    pContainer.style.display = 'none';
+                }
+            }
+        }
+
+        // Update KPI cards with fresh data
+        function updateKPICards(kpis) {
+            if (kpis.totalRecords !== undefined) {
+                const totalRecordsEl = document.querySelector('.kpi-card .kpi-value');
+                if (totalRecordsEl) {
+                    totalRecordsEl.textContent = kpis.totalRecords.toLocaleString();
+                }
+            }
+        }
+
+        // Initialize charts on page load
+        initializeCharts();
+
+        // Auto-refresh charts every 30 seconds
+        const REFRESH_INTERVAL = 30000; // 30 seconds
+        setInterval(updateChartsWithLiveData, REFRESH_INTERVAL);
+
+        // Also update on page visibility change (when user returns to tab)
+        document.addEventListener('visibilitychange', function () {
+            if (!document.hidden) {
+                updateChartsWithLiveData();
             }
         });
 
-        // 2. MTBF
-        new Chart(document.getElementById('chart2'), {
-            type: 'line',
-            data: {
-                labels: ['Avg-22-23', 'Avg-23-24', 'Current'],
-                datasets: [{ label: 'MTBF (Hrs)', data: [252, 476, kpiMTBF], borderColor: '#722ed1', tension: 0.1 }]
-            }, options: commonOptions
-        });
+        console.log('Real-time chart updates enabled (refresh every 30 seconds)');
+    </script>
 
-        // 3. MTTR
-        new Chart(document.getElementById('chart3'), {
-            type: 'line',
-            data: {
-                labels: ['Avg-22-23', 'Avg-23-24', 'Current'],
-                datasets: [{ label: 'MTTR (Mins)', data: [15, 38, kpiMTTR], borderColor: '#2f54eb', tension: 0.1 }]
-            }, options: commonOptions
-        });
+    <script>
+        // Performance Mode Toggler
+        function togglePerformanceMode() {
+            const toggle = document.getElementById('perf-toggle');
+            const label = document.getElementById('perf-label');
+            const slider = toggle.nextElementSibling;
 
-        // 6. Loss Hours
-        new Chart(document.getElementById('chart6'), {
-            type: 'line',
-            data: {
-                labels: ['Avg-22-23', 'Avg-23-24', 'Avg-24-25', 'Apr-24'],
-                datasets: [{ label: 'Down Time (Hrs)', data: [4.9, 8.58, 7.32, 36.1], borderColor: '#f5222d' }]
-            }, options: commonOptions
-        });
-
-        // 7. % Uptime (Availability)
-        new Chart(document.getElementById('chart7'), {
-            type: 'doughnut', // Changed to Doughnut for clear Availability %
-            data: {
-                labels: ['Uptime', 'Downtime'],
-                datasets: [{
-                    data: [kpiAvailability, (100 - kpiAvailability)],
-                    backgroundColor: ['#52c41a', '#ff4d4f'],
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    title: { display: true, text: 'Current Availability: ' + kpiAvailability + '%', color: '#fff', font: { size: 14 } },
-                    legend: { position: 'bottom', labels: { color: '#9aa3b2' } }
-                },
-                cutout: '70%'
+            if (toggle.checked) {
+                // Fast Mode
+                label.textContent = 'Fast (Trial)';
+                label.style.color = '#4ade80';
+                slider.style.backgroundColor = '#52c41a'; // Green
+            } else {
+                // Slow Mode
+                label.textContent = 'Slow (Legacy)';
+                label.style.color = '#ff4d4f';
+                slider.style.backgroundColor = '#ff4d4f'; // Red
             }
-        });
 
-        // 10. Line Downtime
-        new Chart(document.getElementById('chart10'), {
-            type: 'line',
-            data: {
-                labels: ['Avg-22-23', 'Avg-23-24', 'Avg-24-25', 'Apr-24'],
-                datasets: [{ label: 'Downtime', data: [21.25, 25.75, 30, 85], borderColor: '#fa541c' }]
-            }, options: commonOptions
-        });
+            // Trigger refresh
+            updateChartsWithLiveData();
+        }
+
+        // Apply slider style logic inside HTML or cleaner CSS
+        // Let's rely on basic checkbox styles and JS for color updates for now
+    </script>
+
+    <script>
+        // Database Connection Status Checker
+        function checkDatabaseConnection() {
+            const statusDot = document.getElementById('db-status-dot');
+            const statusText = document.getElementById('db-status-text');
+
+            fetch('/api/db-status')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.connected) {
+                        statusDot.classList.remove('disconnected');
+                        statusDot.classList.add('connected');
+                        statusText.textContent = 'Connected';
+                        statusText.style.color = '#10b981';
+                    } else {
+                        statusDot.classList.remove('connected');
+                        statusDot.classList.add('disconnected');
+                        statusText.textContent = 'Disconnected';
+                        statusText.style.color = '#ef4444';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking database status:', error);
+                    statusDot.classList.remove('connected');
+                    statusDot.classList.add('disconnected');
+                    statusText.textContent = 'Disconnected';
+                    statusText.style.color = '#ef4444';
+                });
+        }
+
+        // Check connection status on page load
+        checkDatabaseConnection();
+
+        // Check connection status every 10 seconds
+        setInterval(checkDatabaseConnection, 10000);
     </script>
 
     <script>function toggleTheme() { const body = document.body; const current = body.getAttribute("data-theme"); body.setAttribute("data-theme", current === "light" ? "dark" : "light"); }</script>
