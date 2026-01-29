@@ -38,6 +38,9 @@ public interface Z3PullchordT2Repository extends JpaRepository<Z3PullchordT2Enti
        @Query("SELECT s FROM Z3PullchordT2Entity s WHERE s.station = :station")
        List<Z3PullchordT2Entity> findByStation(@Param("station") String station);
 
+       @Query(value = "SELECT DISTINCT station FROM Z3_Pullchord_T2 ORDER BY station", nativeQuery = true)
+       List<String> findAllUniqueStations();
+
        // Analytics Queries
        @Query(value = "SELECT TOP 5 station, COUNT(*) as count FROM Z3_Pullchord_T2 GROUP BY station ORDER BY count DESC", nativeQuery = true)
        List<Object[]> findTopStations();

@@ -996,7 +996,8 @@
                             <label>Station</label>
                             <select name="station" class="form-control">
                                 <option value="">All Stations</option>
-                                <!-- Add options dynamically if needed -->
+                                <option th:each="s : ${uniqueStations}" th:value="${s}" th:text="${s}"
+                                    th:selected="${s == station}"></option>
                             </select>
                         </div>
 

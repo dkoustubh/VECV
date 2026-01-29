@@ -214,8 +214,9 @@ public class DashboardController {
         model.addAttribute("toDateTime", to);
 
         // Add chart data directly to model (optional, but robust)
-        model.addAttribute("uniqueStations", z3Repository.findTopStations()); // Keep generic list for dropdowns if
-                                                                              // needed
+        model.addAttribute("uniqueStations", z3Repository.findAllUniqueStations()); // Keep generic list for dropdowns
+                                                                                    // if
+        // needed
 
         System.out.println("Dashboard Load Time (SP Mode): " + (System.currentTimeMillis() - startTime) + "ms");
 
